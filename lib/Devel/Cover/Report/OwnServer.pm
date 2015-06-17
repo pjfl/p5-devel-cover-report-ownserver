@@ -3,29 +3,57 @@ package Devel::Cover::Report::OwnServer;
 use 5.010001;
 use strict;
 use warnings;
-use version; our $VERSION = qv( sprintf '0.1.%d', q$Rev: 2 $ =~ /\d+/gmx );
+use version; our $VERSION = qv( sprintf '0.1.%d', q$Rev: 3 $ =~ /\d+/gmx );
 
+use Getopt::Long;
 use HTTP::Tiny;
 use JSON::MaybeXS qw( decode_json encode_json );
 
-my $API_ENDPOINT = 'http://localhost:5000/coverage/report/%s?version=%s';
+my $URI_TEMPLATE = 'http://localhost:5000/coverage/report/%s?version=%s';
+
+# Private subroutines
+my $ex = sub {
+   my $cmd = shift; return qx( $cmd );
+};
+
+my $get_git_info = sub {
+   my ($branch) = grep { m{ \A \* }mx } split "\n", $ex->( 'git branch' );
+
+   $branch =~ s{ \A \* \s* }{}mx;
+
+   return { branch => $branch,
+            sha    => $ex->( 'git log -1 --pretty=format:"%H"' ), };
+};
+
+# Public methods
+sub get_options {
+   my ($self, $opt) = @_;
+
+   $opt->{option}->{uri_template} = $URI_TEMPLATE;
+
+   GetOptions( $opt->{option}, 'uri_template=s' )
+      or die 'Invalid command line options';
+
+   return;
+}
 
 sub report {
-   my ($pkg, $db, $options) = @_;
+   my (undef, $db, $config) = @_;
 
    my %options = map  { $_ => 1 }
                  grep { not m{ path|time }mx } $db->all_criteria, 'force';
 
    $db->calculate_summary( %options );
 
+   my $info = $get_git_info->();
    # Use the hash since there is a bug: use of uninitialized value $file in
    # hash element at Devel/Cover/DB.pm line 324.
-   my $json = encode_json { summary => $db->{summary} };
+   my $json = encode_json { git_info => $info, summary => $db->{summary} };
    my $http = HTTP::Tiny->new
       ( default_headers => { 'Content-Type' => 'application/json' } );
    my $dist = lc ((($db->runs)[ 0 ])->name);
    my $ver  = (($db->runs)[ 0 ])->version;
-   my $url  = sprintf $API_ENDPOINT, $dist, $ver;
+   my $url  = sprintf $config->{option}->{uri_template}, $dist, $ver;
    my $resp = $http->post( $url, { content => $json } );
 
    if ($resp->{success}) {
@@ -54,7 +82,8 @@ Devel::Cover::Report::OwnServer - Post test coverage summary to selected service
 
    perl Build.PL
    ./Build
-   cover -test -report ownServer
+   template=http://your_coverage_server/coverage/report/%s?version=%s
+   cover --uri_template $template -test -report ownServer
 
 =head1 Description
 
@@ -62,7 +91,9 @@ Post test coverage summary to selected service
 
 =head1 Configuration and Environment
 
-Defines no attributes
+The C<uri_template> option should point to your coverage server. Two strings
+will be interpolated; the first is the lower-cased distribution name, and the
+second one is the version number
 
 =head1 Subroutines/Methods
 
@@ -77,6 +108,8 @@ None
 =head1 Dependencies
 
 =over 3
+
+=item L<Getopt::Long>
 
 =item L<HTTP::Tiny>
 
