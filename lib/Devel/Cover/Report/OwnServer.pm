@@ -3,13 +3,13 @@ package Devel::Cover::Report::OwnServer;
 use 5.010001;
 use strict;
 use warnings;
-use version; our $VERSION = qv( sprintf '0.1.%d', q$Rev: 3 $ =~ /\d+/gmx );
+use version; our $VERSION = qv( sprintf '0.1.%d', q$Rev: 4 $ =~ /\d+/gmx );
 
 use Getopt::Long;
 use HTTP::Tiny;
 use JSON::MaybeXS qw( decode_json encode_json );
 
-my $URI_TEMPLATE = 'http://localhost:5000/coverage/report/%s?version=%s';
+my $URI_TEMPLATE = 'http://localhost:5000/coverage/report/%s';
 
 # Private subroutines
 my $ex = sub {
@@ -17,12 +17,14 @@ my $ex = sub {
 };
 
 my $get_git_info = sub {
+   my $version  = shift;
    my ($branch) = grep { m{ \A \* }mx } split "\n", $ex->( 'git branch' );
 
    $branch =~ s{ \A \* \s* }{}mx;
 
-   return { branch => $branch,
-            sha    => $ex->( 'git log -1 --pretty=format:"%H"' ), };
+   return { branch  => $branch,
+            sha     => $ex->( 'git log -1 --pretty=format:"%H"' ),
+            version => $version, };
 };
 
 # Public methods
@@ -45,16 +47,15 @@ sub report {
 
    $db->calculate_summary( %options );
 
-   my $info = $get_git_info->();
+   my $ver  = (($db->runs)[ 0 ])->version;
+   my $dist = lc ((($db->runs)[ 0 ])->name);
    # Use the hash since there is a bug: use of uninitialized value $file in
    # hash element at Devel/Cover/DB.pm line 324.
-   my $json = encode_json { git_info => $info, summary => $db->{summary} };
+   my $data = { info => $get_git_info->( $ver ), summary => $db->{summary} };
    my $http = HTTP::Tiny->new
       ( default_headers => { 'Content-Type' => 'application/json' } );
-   my $dist = lc ((($db->runs)[ 0 ])->name);
-   my $ver  = (($db->runs)[ 0 ])->version;
-   my $url  = sprintf $config->{option}->{uri_template}, $dist, $ver;
-   my $resp = $http->post( $url, { content => $json } );
+   my $uri  = sprintf $config->{option}->{uri_template}, $dist;
+   my $resp = $http->post( $uri, { content => encode_json $data } );
 
    if ($resp->{success}) {
       my $content = decode_json $resp->{content};
@@ -82,7 +83,7 @@ Devel::Cover::Report::OwnServer - Post test coverage summary to selected service
 
    perl Build.PL
    ./Build
-   template=http://your_coverage_server/coverage/report/%s?version=%s
+   template=http://your_coverage_server/coverage/report/%s
    cover --uri_template $template -test -report ownServer
 
 =head1 Description
@@ -91,9 +92,11 @@ Post test coverage summary to selected service
 
 =head1 Configuration and Environment
 
-The C<uri_template> option should point to your coverage server. Two strings
-will be interpolated; the first is the lower-cased distribution name, and the
-second one is the version number
+The C<uri_template> option should point to your coverage server. One string
+will be interpolated; the lower-cased distribution name. The default
+template is;
+
+   http://localhost:5000/coverage/report/%s
 
 =head1 Subroutines/Methods
 
