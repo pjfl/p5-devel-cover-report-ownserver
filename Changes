@@ -1,5 +1,6 @@
 Revision history for Devel::Cover::Report::OwnServer
 
+0.2.1     2015-06-22 14:31:37
           - Moved version from uri to info hash
           - Added configurable uri template
           - Works

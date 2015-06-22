@@ -1,3 +1,4 @@
+requires "Getopt::Long" => "2.42";
 requires "HTTP::Tiny" => "0.054";
 requires "JSON::MaybeXS" => "1.002006";
 requires "perl" => "5.010001";

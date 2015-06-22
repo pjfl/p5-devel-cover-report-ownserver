@@ -6,7 +6,8 @@ Devel::Cover::Report::OwnServer - Post test coverage summary to selected service
 
     perl Build.PL
     ./Build
-    cover -test -report ownServer
+    template=http://your_coverage_server/coverage/report/%s
+    cover --uri_template $template -test -report ownServer
 
 # Description
 
@@ -14,9 +15,17 @@ Post test coverage summary to selected service
 
 # Configuration and Environment
 
-Defines no attributes
+The `uri_template` option should point to your coverage server. One string
+will be interpolated; the lower-cased distribution name. The default
+template is;
+
+    http://localhost:5000/coverage/report/%s
 
 # Subroutines/Methods
+
+## `get_options`
+
+Adds `uri_template` to the command line options
 
 ## `report`
 
@@ -28,6 +37,7 @@ None
 
 # Dependencies
 
+- [Getopt::Long](https://metacpan.org/pod/Getopt::Long)
 - [HTTP::Tiny](https://metacpan.org/pod/HTTP::Tiny)
 - [JSON::MaybeXS](https://metacpan.org/pod/JSON::MaybeXS)
 

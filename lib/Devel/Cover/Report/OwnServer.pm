@@ -3,7 +3,7 @@ package Devel::Cover::Report::OwnServer;
 use 5.010001;
 use strict;
 use warnings;
-use version; our $VERSION = qv( sprintf '0.1.%d', q$Rev: 4 $ =~ /\d+/gmx );
+use version; our $VERSION = qv( sprintf '0.2.%d', q$Rev: 1 $ =~ /\d+/gmx );
 
 use Getopt::Long;
 use HTTP::Tiny;
@@ -17,21 +17,21 @@ my $ex = sub {
 };
 
 my $get_git_info = sub {
-   my $version  = shift;
+   my ($dist, $version)  = @_;
+
    my ($branch) = grep { m{ \A \* }mx } split "\n", $ex->( 'git branch' );
 
    $branch =~ s{ \A \* \s* }{}mx;
 
    return { branch  => $branch,
-            sha     => $ex->( 'git log -1 --pretty=format:"%H"' ),
+            commit  => $ex->( 'git log -1 --pretty=format:"%H"' ),
+            dist    => $dist,
             version => $version, };
 };
 
 # Public methods
 sub get_options {
-   my ($self, $opt) = @_;
-
-   $opt->{option}->{uri_template} = $URI_TEMPLATE;
+   my ($self, $opt) = @_; $opt->{option}->{uri_template} = $URI_TEMPLATE;
 
    GetOptions( $opt->{option}, 'uri_template=s' )
       or die 'Invalid command line options';
@@ -47,15 +47,16 @@ sub report {
 
    $db->calculate_summary( %options );
 
-   my $ver  = (($db->runs)[ 0 ])->version;
-   my $dist = lc ((($db->runs)[ 0 ])->name);
+   my $dist    = (($db->runs)[ 0 ])->name;
+   my $version = (($db->runs)[ 0 ])->version;
    # Use the hash since there is a bug: use of uninitialized value $file in
    # hash element at Devel/Cover/DB.pm line 324.
-   my $data = { info => $get_git_info->( $ver ), summary => $db->{summary} };
-   my $http = HTTP::Tiny->new
+   my $report  = { info    => $get_git_info->( $dist, $version ),
+                   summary => $db->{summary} };
+   my $http    = HTTP::Tiny->new
       ( default_headers => { 'Content-Type' => 'application/json' } );
-   my $uri  = sprintf $config->{option}->{uri_template}, $dist;
-   my $resp = $http->post( $uri, { content => encode_json $data } );
+   my $uri     = sprintf $config->{option}->{uri_template}, lc $dist;
+   my $resp    = $http->post( $uri, { content => encode_json $report } );
 
    if ($resp->{success}) {
       my $content = decode_json $resp->{content};
@@ -99,6 +100,10 @@ template is;
    http://localhost:5000/coverage/report/%s
 
 =head1 Subroutines/Methods
+
+=head2 C<get_options>
+
+Adds C<uri_template> to the command line options
 
 =head2 C<report>
 
