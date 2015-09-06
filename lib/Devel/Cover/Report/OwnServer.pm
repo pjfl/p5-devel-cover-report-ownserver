@@ -3,7 +3,7 @@ package Devel::Cover::Report::OwnServer;
 use 5.010001;
 use strict;
 use warnings;
-use version; our $VERSION = qv( sprintf '0.2.%d', q$Rev: 1 $ =~ /\d+/gmx );
+use version; our $VERSION = qv( sprintf '0.2.%d', q$Rev: 2 $ =~ /\d+/gmx );
 
 use Getopt::Long;
 use HTTP::Tiny;
@@ -17,16 +17,24 @@ my $ex = sub {
 };
 
 my $get_git_info = sub {
-   my ($dist, $version)  = @_;
+   my ($dist, $version) = @_;
 
-   my ($branch) = grep { m{ \A \* }mx } split "\n", $ex->( 'git branch' );
+   my ($branch) =  grep { m{ \A \* }mx } split "\n", $ex->( 'git branch' );
+       $branch  =~ s{ \A \* \s* }{}mx;
+   my $remotes  =  [ map    { my ($name, $url) = split q( ), $_;
+                              +{ name => $name, url => $url } }
+                     split m{ \n }mx, $ex->( 'git remote -v' ) ];
 
-   $branch =~ s{ \A \* \s* }{}mx;
-
-   return { branch  => $branch,
-            commit  => $ex->( 'git log -1 --pretty=format:"%H"' ),
-            dist    => $dist,
-            version => $version, };
+   return { author_name     => $ex->( 'git log -1 --pretty=format:"%aN"' ),
+            author_email    => $ex->( 'git log -1 --pretty=format:"%ae"' ),
+            branch          => $branch,
+            commit          => $ex->( 'git log -1 --pretty=format:"%H"' ),
+            committer_name  => $ex->( 'git log -1 --pretty=format:"%cN"' ),
+            committer_email => $ex->( 'git log -1 --pretty=format:"%ce"' ),
+            dist            => $dist,
+            message         => $ex->( 'git log -1 --pretty=format:"%s"' ),
+            remotes         => $remotes,
+            version         => $version, };
 };
 
 # Public methods
