@@ -3,7 +3,7 @@ package Devel::Cover::Report::OwnServer;
 use 5.010001;
 use strict;
 use warnings;
-use version; our $VERSION = qv( sprintf '0.2.%d', q$Rev: 2 $ =~ /\d+/gmx );
+use version; our $VERSION = qv( sprintf '0.2.%d', q$Rev: 3 $ =~ /\d+/gmx );
 
 use Getopt::Long;
 use HTTP::Tiny;
@@ -31,6 +31,7 @@ my $get_git_info = sub {
             commit          => $ex->( 'git log -1 --pretty=format:"%H"' ),
             committer_name  => $ex->( 'git log -1 --pretty=format:"%cN"' ),
             committer_email => $ex->( 'git log -1 --pretty=format:"%ce"' ),
+            coverage_token  => $ENV{COVERAGE_TOKEN} // '[?]',
             dist            => $dist,
             message         => $ex->( 'git log -1 --pretty=format:"%s"' ),
             remotes         => $remotes,
