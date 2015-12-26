@@ -15,9 +15,9 @@ my $prereqs  = {
     'version' => '0.88'
   },
   'requires' => {
-    'Getopt::Long' => '2.42',
-    'HTTP::Tiny' => '0.054',
-    'JSON::MaybeXS' => '1.002006',
+    'Getopt::Long' => '0',
+    'HTTP::Tiny' => '0',
+    'JSON::PP' => '0',
     'perl' => '5.010001'
   },
   'test_requires' => {

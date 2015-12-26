@@ -1,6 +1,6 @@
-requires "Getopt::Long" => "2.42";
-requires "HTTP::Tiny" => "0.054";
-requires "JSON::MaybeXS" => "1.002006";
+requires "Getopt::Long" => "0";
+requires "HTTP::Tiny" => "0";
+requires "JSON::PP" => "0";
 requires "perl" => "5.010001";
 
 on 'build' => sub {

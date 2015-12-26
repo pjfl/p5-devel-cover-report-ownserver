@@ -3,44 +3,46 @@ package Devel::Cover::Report::OwnServer;
 use 5.010001;
 use strict;
 use warnings;
-use version; our $VERSION = qv( sprintf '0.2.%d', q$Rev: 5 $ =~ /\d+/gmx );
+use version; our $VERSION = qv( sprintf '0.2.%d', q$Rev: 6 $ =~ /\d+/gmx );
 
 use Getopt::Long;
 use HTTP::Tiny;
-use JSON::MaybeXS qw( decode_json encode_json );
+use JSON::PP qw( decode_json encode_json );
 
 my $URI_TEMPLATE = 'http://localhost:5000/coverage/report/%s';
 
 # Private subroutines
-my $ex = sub {
+my $run = sub {
    my $cmd = shift; return qx( $cmd );
 };
 
 my $get_git_info = sub {
    my ($dist, $version) = @_;
 
-   my ($branch) =  grep { m{ \A \* }mx } split "\n", $ex->( 'git branch' );
+   my ($branch) =  grep { m{ \A \* }mx } split "\n", $run->( 'git branch' );
        $branch  =~ s{ \A \* \s* }{}mx;
    my $remotes  =  [ map    { my ($name, $url) = split q( ), $_;
                               +{ name => $name, url => $url } }
-                     split m{ \n }mx, $ex->( 'git remote -v' ) ];
+                     split m{ \n }mx, $run->( 'git remote -v' ) ];
 
-   return { author_name     => $ex->( 'git log -1 --pretty=format:"%aN"' ),
-            author_email    => $ex->( 'git log -1 --pretty=format:"%ae"' ),
+   return { author_name     => $run->( 'git log -1 --pretty=format:"%aN"' ),
+            author_email    => $run->( 'git log -1 --pretty=format:"%ae"' ),
             branch          => $branch,
-            commit          => $ex->( 'git log -1 --pretty=format:"%H"' ),
-            committer_name  => $ex->( 'git log -1 --pretty=format:"%cN"' ),
-            committer_email => $ex->( 'git log -1 --pretty=format:"%ce"' ),
+            commit          => $run->( 'git log -1 --pretty=format:"%H"' ),
+            committer_name  => $run->( 'git log -1 --pretty=format:"%cN"' ),
+            committer_email => $run->( 'git log -1 --pretty=format:"%ce"' ),
             coverage_token  => $ENV{COVERAGE_TOKEN} // '[?]',
             dist_name       => $dist,
-            message         => $ex->( 'git log -1 --pretty=format:"%s"' ),
+            message         => $run->( 'git log -1 --pretty=format:"%s"' ),
             remotes         => $remotes,
             version         => $version, };
 };
 
 # Public methods
 sub get_options {
-   my ($self, $opt) = @_; $opt->{option}->{uri_template} = $URI_TEMPLATE;
+   my ($self, $opt) = @_;
+
+   $opt->{option}->{uri_template} = $ENV{COVERAGE_URI} // $URI_TEMPLATE;
 
    GetOptions( $opt->{option}, 'uri_template=s' )
       or die 'Invalid command line options';
@@ -95,8 +97,13 @@ Devel::Cover::Report::OwnServer - Post test coverage summary to selected service
 
    perl Build.PL
    ./Build
-   template=http://your_coverage_server/coverage/report/%s
-   cover --uri_template $template -test -report ownServer
+   template="https://your_coverage_server/coverage/report/%s"
+   cover --uri_template ${template} -test -report ownServer
+
+   # OR
+
+   export COVERAGE_URI="https://your_coverage_server/coverage/report/%s"
+   perl Build.PL && ./Build && cover -test -report ownServer
 
 =head1 Description
 
@@ -104,11 +111,24 @@ Post test coverage summary to selected service
 
 =head1 Configuration and Environment
 
-The C<uri_template> option should point to your coverage server. One string
-will be interpolated; the lower-cased distribution name. The default
-template is;
+Either the C<uri_template> option or the C<COVERAGE_URI> environment variable
+should point to your coverage server. One string will be interpolated; the
+lower-cased distribution name. The default template is;
 
    http://localhost:5000/coverage/report/%s
+
+The value of the environment variable C<COVERAGE_TOKEN> is sent to the server
+along with the coverage report summary. The token is used to authenticate
+post from the integration server to the coverage server. For Travis-CI
+use the command
+
+   travis encrypt COVERAGE_TOKEN=<insert your token here>
+
+and place the output in your F<.travis.yml> file
+
+   env:
+     global:
+       - secure: <base64 encoded output from travis encrypt>
 
 =head1 Subroutines/Methods
 
@@ -119,6 +139,17 @@ Adds C<uri_template> to the command line options
 =head2 C<report>
 
 Send the test coverage summary report to the selected service
+
+=head1 See Also
+
+=over 3
+
+=item C<http://github.com/pjfl/p5-coverage-server>
+
+An example implementation of a coverage server that accepts the report
+summaries posted to it by this module and serves C<SVG> coverage badges
+
+=back
 
 =head1 Diagnostics
 
@@ -132,7 +163,7 @@ None
 
 =item L<HTTP::Tiny>
 
-=item L<JSON::MaybeXS>
+=item L<JSON::PP>
 
 =back
 

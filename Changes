@@ -1,5 +1,6 @@
 Revision history for Devel::Cover::Report::OwnServer
 
+          - Added COVERAGE_URI environment variable
           - Toolchain update
           - Better attribute names in git info
           - More attr in get_git_info allows Github API navigation

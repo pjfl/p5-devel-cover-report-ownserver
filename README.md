@@ -6,8 +6,13 @@ Devel::Cover::Report::OwnServer - Post test coverage summary to selected service
 
     perl Build.PL
     ./Build
-    template=http://your_coverage_server/coverage/report/%s
-    cover --uri_template $template -test -report ownServer
+    template="https://your_coverage_server/coverage/report/%s"
+    cover --uri_template ${template} -test -report ownServer
+
+    # OR
+
+    export COVERAGE_URI="https://your_coverage_server/coverage/report/%s"
+    perl Build.PL && ./Build && cover -test -report ownServer
 
 # Description
 
@@ -15,11 +20,24 @@ Post test coverage summary to selected service
 
 # Configuration and Environment
 
-The `uri_template` option should point to your coverage server. One string
-will be interpolated; the lower-cased distribution name. The default
-template is;
+Either the `uri_template` option or the `COVERAGE_URI` environment variable
+should point to your coverage server. One string will be interpolated; the
+lower-cased distribution name. The default template is;
 
     http://localhost:5000/coverage/report/%s
+
+The value of the environment variable `COVERAGE_TOKEN` is sent to the server
+along with the coverage report summary. The token is used to authenticate
+post from the integration server to the coverage server. For Travis-CI
+use the command
+
+    travis encrypt COVERAGE_TOKEN=<insert your token here>
+
+and place the output in your `.travis.yml` file
+
+    env:
+      global:
+        - secure: <base64 encoded output from travis encrypt>
 
 # Subroutines/Methods
 
@@ -31,6 +49,13 @@ Adds `uri_template` to the command line options
 
 Send the test coverage summary report to the selected service
 
+# See Also
+
+- `http://github.com/pjfl/p5-coverage-server`
+
+    An example implementation of a coverage server that accepts the report
+    summaries posted to it by this module and serves `SVG` coverage badges
+
 # Diagnostics
 
 None
@@ -39,7 +64,7 @@ None
 
 - [Getopt::Long](https://metacpan.org/pod/Getopt::Long)
 - [HTTP::Tiny](https://metacpan.org/pod/HTTP::Tiny)
-- [JSON::MaybeXS](https://metacpan.org/pod/JSON::MaybeXS)
+- [JSON::PP](https://metacpan.org/pod/JSON::PP)
 
 # Incompatibilities
 
