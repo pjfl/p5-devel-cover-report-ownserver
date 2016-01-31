@@ -39,6 +39,10 @@ and place the output in your `.travis.yml` file
       global:
         - secure: <base64 encoded output from travis encrypt>
 
+This Travis encrypt command must be run from within the working copy of
+the repository as it detects the repository name and uses it to salt
+the encryption
+
 # Subroutines/Methods
 
 ## `get_options`
@@ -86,7 +90,7 @@ Peter Flanigan, `<pjfl@cpan.org>`
 
 # License and Copyright
 
-Copyright (c) 2015 Peter Flanigan. All rights reserved
+Copyright (c) 2016 Peter Flanigan. All rights reserved
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself. See [perlartistic](https://metacpan.org/pod/perlartistic)
